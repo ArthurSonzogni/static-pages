@@ -80,20 +80,8 @@
     "url": "https://truthsocial.com/"
   },
   {
-    "name": "Binance",
-    "url": "https://www.binance.com/"
-  },
-  {
-    "name": "Proton Mail",
-    "url": "https://mail.proton.me/"
-  },
-  {
-    "name": "Reddit",
-    "url": "https://www.reddit.com/"
-  },
-  {
-    "name": "Discord",
-    "url": "https://discord.com/app"
+    "name": "Proton",
+    "url": "https://account.proton.me/"
   },
   {
     "name": "Google (Not a PWA)",
