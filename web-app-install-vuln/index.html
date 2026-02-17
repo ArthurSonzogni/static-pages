@@ -131,10 +131,14 @@
     <div class="explanation">
         <h2>2. Event Explorer</h2>
         <p>
-            The <code>invalidReason</code> attribute and error events can expose why an installation failed. 
+            Events like <code>validationstatuschange</code>,
+            <code>promptaction</code>, and <code>promptdismiss</code> can
+            provide additional insights into the installation process.
         </p>
         <p>
-            <strong>Note:</strong> It is currently unclear if this behavior can be reliably abused to leak sensitive information, but it remains an interesting area for security research. In theory, distinguishing between a "404 Not Found" (Fetch Error) and a "200 OK" (Parser Error) could reveal the existence of private resources cross-origin without CORS.
+            <strong>Note:</strong> It is currently unclear if this behavior can
+            be used to leak something new, but it's worth exploring or testing
+            locally:
         </p>
         <div class="demo-box">
             <input type="text" id="xsleak-url" placeholder="Enter URL (e.g. https://google.com/)" style="width: 60%; padding: 8px;">
@@ -145,26 +149,38 @@
                 <small>Try these (Manifest Examples):</small><br>
                 <button class="example-btn" data-url="https://mustjab.github.io">Mustjab (Test PWA)</button>
                 <button class="example-btn" data-url="https://domain.does.not.exist.test/">Network Error</button>
+                <button class="example-btn" data-url="http://localhost:8000/">http://localhost:8000/</button>
+                <button class="example-btn" data-url="http://192.168.1.1">http://192.168.1.1</button>
             </div>
             
             <div id="xsleak-container" style="margin-top: 15px; padding: 10px; border: 1px solid #ddd; min-height: 50px; display: flex; align-items: center; justify-content: center; background: #fff;">
                 <span style="color: #999;">Element will appear here...</span>
             </div>
             
-            <p id="xsleak-result" style="margin-top: 10px; font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap;"></p>
+            <p id="xsleak-result" style="margin-top: 10px; font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; white-space: pre; overflow-x: auto;"></p>
         </div>
     </div>
 
     <div class="explanation">
         <h2>3. Context Spoofing & Phishing</h2>
         <p>
-            Legitimate <code>&lt;install&gt;</code> elements can be disguised within a malicious context to trick users into initiating an installation. 
+            Can <code>&lt;install&gt;</code> elements be disguised as fake
+            buttons to trick users into installing unwanted applications? For
+            example, a malicious site could create an
+            <code>&lt;install&gt;</code> element with a very small size (e.g.,
+            1x1 pixel) and position it over a seemingly innocent button or link.
+            When the user clicks the button, they might unknowingly trigger the
+            installation of a potentially harmful application?
+        </p>
+        <p>
+            <strong>PEPC Mitigation:</strong> This is relying on PEPC (page
+            embedded permission control). It is not possible to hide the button
+            behind other elements. There are also protections to ignore click if
+            the button hasn't been in a "fully visible" + "stable" position for
+            more than ~500ms.
         </p>
         <p>
             <strong>Mitigation:</strong> This is generally not considered a vulnerability as long as the browser displays a native installation prompt that is sufficiently clear and useful. If the prompt explicitly shows the app name, icon, and origin, the user can theoretically catch the deception before confirming the install.
-        </p>
-        <p>
-            <strong>PEPC Mitigation:</strong> This is relying on PEPC (page embedded permission control). It is not possible to hide the button behind other elements. There are also protections to ignore click if the button hasn't been in a "stable" position for more than X ms.
         </p>
         <div class="demo-box" style="text-align: center; border: 2px solid #ff4444;">
             <div style="background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
@@ -174,7 +190,6 @@
                     <install installurl="https://mustjab.github.io" style="opacity: 0.1; position: absolute; width: 100%; height: 100%; cursor: pointer;"></install>
                     <button style="padding: 15px 30px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; pointer-events: none;">CLAIM MY PRIZE NOW</button>
                 </div>
-                <p style="font-size: 12px; color: #666; margin-top: 10px;">*The green button is just a visual; the invisible &lt;install&gt; element is on top of it.</p>
             </div>
         </div>
     </div>
@@ -307,9 +322,14 @@
             // Add Event Listeners based on the snippet
             const logEvent = (name, event) => {
                 const target = event.target;
-                const log = `[${name}] valid: ${target.isValid}, reason: ${target.invalidReason}\n`;
+                let log;
+                if (target.isValid) {
+                    log = `[${name}] target.isValid: ${target.isValid}\n`;
+                } else {
+                    log = `[${name}] target.isValid: ${target.isValid}, :invalidReason:${target.invalidReason}\n`;
+                }
+                console.log(event)
                 resultEl.textContent += log;
-                console.log(name, event);
             };
 
             if ('HTMLInstallElement' in window) {
@@ -355,7 +375,6 @@
                 invalidReason: xsLeakElement.invalidReason || null,
                 offsetWidth: width,
                 baselineWidth: baseline,
-                isMatch: width === baseline
             };
             
             // Append the JSON to the log
