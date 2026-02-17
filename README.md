@@ -5,5 +5,5 @@ Each subdirectory contains a standalone project.
 
 ## Projects
 
-- [Project 1](./project-1/)
-- [Project 2](./project-2/)
+- [Project 1](https://ArthurSonzogni.github.io/static-pages/project-1/)
+- [Project 2](https://ArthurSonzogni.github.io/static-pages/project-2/)
