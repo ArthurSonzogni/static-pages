@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Demo App 1 (Mustjab)",
+    "url": "https://mustjab.github.io/"
+  },
+  {
+    "name": "Demo App 2 (Bubble)",
+    "url": "https://diek.us/bubble/"
+  },
+  {
+    "name": "Demo App 3 (Amanda Baker)",
+    "url": "https://amandabaker.github.io/pwa/web-install/index.html"
+  },
+  {
+    "name": "YouTube",
+    "url": "https://www.youtube.com/"
+  },
+  {
+    "name": "Twitter / X",
+    "url": "https://twitter.com/"
+  },
+  {
+    "name": "Spotify",
+    "url": "https://open.spotify.com/"
+  },
+  {
+    "name": "Telegram Web",
+    "url": "https://web.telegram.org/k/"
+  },
+  {
+    "name": "Google Maps",
+    "url": "https://www.google.com/maps"
+  },
+  {
+    "name": "Instagram",
+    "url": "https://www.instagram.com/"
+  },
+  {
+    "name": "Pinterest",
+    "url": "https://www.pinterest.com/"
+  },
+  {
+    "name": "Tinder",
+    "url": "https://tinder.com/"
+  },
+  {
+    "name": "Uber",
+    "url": "https://m.uber.com/"
+  },
+  {
+    "name": "AliExpress",
+    "url": "https://m.aliexpress.com/"
+  },
+  {
+    "name": "Squoosh",
+    "url": "https://squoosh.app/"
+  },
+  {
+    "name": "SVGOMG",
+    "url": "https://svgomg.net/"
+  }
+]

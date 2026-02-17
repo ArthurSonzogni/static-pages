@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App Install POC Discovery</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .explanation {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .warning {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        #results {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .app-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .app-name {
+            font-weight: 500;
+        }
+        .app-status {
+            font-family: monospace;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .status-installed {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-not-installed {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status-unknown {
+            background-color: #f5f5f5;
+            color: #616161;
+        }
+        /* Hide the install elements but keep them rendered for layout */
+        #hidden-container {
+            position: absolute;
+            top: -1000px;
+            left: -1000px;
+            visibility: hidden; /* Might affect layout, usually opacity: 0 is safer but let's try absolute positioning off-screen */
+        }
+        /* Ensure the element has a layout */
+        install {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Web App Install POC Discovery</h1>
+
+    <div class="explanation">
+        <h2>What is this?</h2>
+        <p>This Proof of Concept (POC) demonstrates a potential privacy issue with the new <code>&lt;install&gt;</code> HTML element.</p>
+        <p>
+            The <code>&lt;install&gt;</code> element is designed to provide a native installation UI for Web Apps. 
+            However, its visual appearance (specifically its dimensions) changes depending on whether the target application is <strong>already installed</strong> or <strong>not installed</strong> on the user's device.
+        </p>
+        <p>
+            Typically, it displays "Install" (shorter text) or "Launch" (longer text) - or vice versa depending on localization.
+            <br>
+            <span class="warning">The Privacy Leak:</span> By creating an <code>&lt;install&gt;</code> element for a target URL and measuring its width (<code>offsetWidth</code>), a malicious website can infer if you have that application installed, effectively allowing them to "list" your installed applications without your permission.
+        </p>
+    </div>
+
+    <button id="start-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">Start Scan</button>
+
+    <div id="results" style="margin-top: 20px;">
+        <h3>Scan Results</h3>
+        <div id="app-list">Click "Start Scan" to begin.</div>
+    </div>
+
+    <!-- Container for the install elements -->
+    <div id="hidden-container"></div>
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        const appList = document.getElementById('app-list');
+        const hiddenContainer = document.getElementById('hidden-container');
+
+        async function fetchApps() {
+            try {
+                const response = await fetch('apps.json');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching apps.json:', error);
+                return [];
+            }
+        }
+
+        async function runScan() {
+            appList.innerHTML = 'Scanning...';
+            startBtn.disabled = true;
+            
+            const apps = await fetchApps();
+            if (apps.length === 0) {
+                appList.innerHTML = 'No apps found in apps.json';
+                startBtn.disabled = false;
+                return;
+            }
+
+            appList.innerHTML = '';
+            
+            // First pass: Create all elements to ensure they are in the DOM
+            // We need them to be rendered to measure them.
+            // Using a Map to store the elements for measurement
+            const appElements = new Map();
+
+            for (const app of apps) {
+                const el = document.createElement('install');
+                el.setAttribute('installurl', app.url);
+                
+                // Add to hidden container
+                hiddenContainer.appendChild(el);
+                appElements.set(app, el);
+            }
+
+            // Give the browser a moment to render layout
+            // requestAnimationFrame might be enough, or a small timeout
+            await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 500)));
+
+            // Measure and Analyze
+            // We expect two groups of sizes: "Install" group and "Launch" group.
+            // We don't know which is which a priori without knowing the locale and font, 
+            // but "Not Installed" should be the majority (statistically).
+            
+            const results = [];
+            const widthCounts = {};
+
+            for (const [app, el] of appElements) {
+                const width = el.offsetWidth;
+                results.push({ app, width });
+                
+                widthCounts[width] = (widthCounts[width] || 0) + 1;
+            }
+
+            // Determine the "baseline" width (most common width) -> likely "Not Installed"
+            let baselineWidth = -1;
+            let maxCount = -1;
+            for (const [w, count] of Object.entries(widthCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    baselineWidth = parseInt(w);
+                }
+            }
+
+            // Display results
+            for (const res of results) {
+                const row = document.createElement('div');
+                row.className = 'app-row';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'app-name';
+                nameSpan.textContent = res.app.name;
+
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'app-status';
+                
+                // Logic: if width is different from baseline, it's likely installed (or error/different state)
+                // Note: This logic assumes most apps are NOT installed.
+                let statusText = 'Unknown';
+                let statusClass = 'status-unknown';
+
+                if (res.width === 0) {
+                     statusText = 'Error/Not Rendered';
+                } else if (res.width === baselineWidth) {
+                    statusText = 'Not Installed';
+                    statusClass = 'status-not-installed';
+                } else {
+                    statusText = 'Likely Installed'; // Different size
+                    statusClass = 'status-installed';
+                }
+
+                statusSpan.classList.add(statusClass);
+                statusSpan.innerHTML = `${statusText} <small>(${res.width}px)</small>`;
+
+                row.appendChild(nameSpan);
+                row.appendChild(statusSpan);
+                appList.appendChild(row);
+            }
+
+            // Cleanup
+            hiddenContainer.innerHTML = '';
+            startBtn.disabled = false;
+        }
+
+        startBtn.addEventListener('click', runScan);
+    </script>
+</body>
+</html>
