@@ -16,8 +16,8 @@
     "url": "https://www.youtube.com/"
   },
   {
-    "name": "Twitter / X",
-    "url": "https://twitter.com/"
+    "name": "X (Twitter)",
+    "url": "https://x.com/"
   },
   {
     "name": "Spotify",
@@ -58,5 +58,45 @@
   {
     "name": "SVGOMG",
     "url": "https://svgomg.net/"
+  },
+  {
+    "name": "Disney+",
+    "url": "https://www.disneyplus.com/"
+  },
+  {
+    "name": "Grindr",
+    "url": "https://web.grindr.com/"
+  },
+  {
+    "name": "Bumble",
+    "url": "https://bumble.com/app"
+  },
+  {
+    "name": "OnlyFans",
+    "url": "https://onlyfans.com/"
+  },
+  {
+    "name": "Truth Social",
+    "url": "https://truthsocial.com/"
+  },
+  {
+    "name": "Binance",
+    "url": "https://www.binance.com/"
+  },
+  {
+    "name": "Proton Mail",
+    "url": "https://mail.proton.me/"
+  },
+  {
+    "name": "Reddit",
+    "url": "https://www.reddit.com/"
+  },
+  {
+    "name": "Discord",
+    "url": "https://discord.com/app"
+  },
+  {
+    "name": "Google (Not a PWA)",
+    "url": "https://www.google.com/"
   }
 ]

