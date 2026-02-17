@@ -143,9 +143,7 @@
             
             <div style="margin-top: 10px;">
                 <small>Try these (Manifest Examples):</small><br>
-                <button class="example-btn" data-url="https://www.youtube.com/">YouTube</button>
-                <button class="example-btn" data-url="https://www.instagram.com/">Instagram</button>
-                <button class="example-btn" data-url="https://x.com/">X (Twitter)</button>
+                <button class="example-btn" data-url="https://mustjab.github.io">Mustjab (Test PWA)</button>
                 <button class="example-btn" data-url="https://domain.does.not.exist.test/">Network Error</button>
             </div>
             
@@ -165,12 +163,15 @@
         <p>
             <strong>Mitigation:</strong> This is generally not considered a vulnerability as long as the browser displays a native installation prompt that is sufficiently clear and useful. If the prompt explicitly shows the app name, icon, and origin, the user can theoretically catch the deception before confirming the install.
         </p>
+        <p>
+            <strong>PEPC Mitigation:</strong> This is relying on PEPC (page embedded permission control). It is not possible to hide the button behind other elements. There are also protections to ignore click if the button hasn't been in a "stable" position for more than X ms.
+        </p>
         <div class="demo-box" style="text-align: center; border: 2px solid #ff4444;">
             <div style="background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                 <h2 style="color: #ff4444; margin-top: 0;">🎁 CONGRATULATIONS! 🎁</h2>
                 <p>You have won a free iPhone 17 Pro Max! Click below to claim your prize instantly!</p>
                 <div style="position: relative; display: inline-block;">
-                    <install installurl="https://www.youtube.com/" style="opacity: 0.1; position: absolute; width: 100%; height: 100%; cursor: pointer;"></install>
+                    <install installurl="https://mustjab.github.io" style="opacity: 0.1; position: absolute; width: 100%; height: 100%; cursor: pointer;"></install>
                     <button style="padding: 15px 30px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; pointer-events: none;">CLAIM MY PRIZE NOW</button>
                 </div>
                 <p style="font-size: 12px; color: #666; margin-top: 10px;">*The green button is just a visual; the invisible &lt;install&gt; element is on top of it.</p>
@@ -302,7 +303,6 @@
             // Create new element
             const el = document.createElement('install');
             el.setAttribute('installurl', url);
-            el.style.border = '1px solid blue'; // Visual aid
             
             // Add Event Listeners based on the snippet
             const logEvent = (name, event) => {
