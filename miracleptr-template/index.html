@@ -147,19 +147,20 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Split Chart Section wrapper with tighter max-width for better block wrapping -->
-        <div class="pt-8 pb-12 max-w-5xl mx-auto w-full">
+        <!-- Split Chart Section wrapper -->
+        <div class="pb-12">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div class="px-6 py-5 border-b border-slate-200 bg-slate-50 flex flex-col xl:flex-row justify-between items-start xl:items-center">
                     <div class="max-w-3xl">
                         <h2 class="text-lg font-semibold text-slate-800">Protected Member Coverage by Type</h2>
-                        <p class="text-sm text-slate-500 mt-1 leading-relaxed">Each small block represents <strong>one single instance</strong> of the container type. Blocks naturally wrap to multiple lines to accommodate large volumes, allowing for visual estimation of absolute quantities. Dark segments represent protected <code class="bg-gray-200 px-1 rounded text-xs">raw_ptr</code> elements.</p>
+                        <p class="text-sm text-slate-500 mt-1 leading-relaxed">Each small block represents <strong>one single instance</strong> of the container type. Dark segments represent protected <code class="bg-gray-200 px-1 rounded text-xs">raw_ptr</code> elements, while light segments are unprotected.</p>
                     </div>
-                    <div class="flex items-center space-x-4 mt-4 sm:mt-0 text-xs font-medium text-slate-600 flex-shrink-0">
-                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-blue-500 mr-1.5"></span>Production</div>
-                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-orange-500 mr-1.5"></span>Test</div>
+                    <div class="flex flex-wrap items-center gap-3 mt-4 xl:mt-0 text-xs font-medium text-slate-600 flex-shrink-0">
+                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-blue-500 mr-1.5"></span>Production (Protected)</div>
+                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-blue-200 mr-1.5"></span>Production (Unprotected)</div>
+                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-orange-500 mr-1.5"></span>Test (Protected)</div>
+                        <div class="flex items-center"><span class="w-3 h-3 rounded bg-orange-200 mr-1.5"></span>Test (Unprotected)</div>
                     </div>
                 </div>
                 
@@ -224,15 +225,24 @@
         const clangSupported = new Set([
             "vector", "set", "unordered_set", "flat_set", "flat_hash_set", 
             "deque", "circular_deque", "queue", "stack", "list",
-            "map", "flat_map"
+            "map", "flat_map", "unordered_map",
         ]);
+        
+        // Define which containers have partial support
+        const clangPartialSupported = new Set([
+            "map", "flat_map", "unordered_map"
+        ]);
+
+        // Variable to hold our frozen sort order so items don't shift when dates change
+        let frozenSortOrder = null;
 
         // Main rendering function that processes CSV and updates the UI
         function renderDashboard(csvString) {
             // Parse Data
             const data = d3.csvParse(csvString, d => {
                 return {
-                    memberType: d["Member Type"],
+                    rawMemberType: d["Member Type"],
+                    memberType: d["Member Type"] + "<T*>",
                     prodRaw: +d["Production raw_ptr<T>"] || 0,
                     prodTotal: +d["Production Total"] || 0,
                     testRaw: +d["Test raw_ptr<T>"] || 0,
@@ -433,9 +443,27 @@
             document.getElementById("kpi-unsupported-bar").style.width = `${unsuppPct}%`;
 
             // 3. POPULATE THE SPLIT CHART VISUALIZATION
-            const chartData = data
-                .filter(d => d.grandTotal > 0)
-                .sort((a, b) => b.grandTotal - a.grandTotal);
+            let chartData = data.filter(d => d.grandTotal > 0);
+
+            // Establish or utilize frozen sort order
+            if (!frozenSortOrder) {
+                // First load: Sort by grandTotal descending and freeze the array of memberTypes
+                chartData.sort((a, b) => b.grandTotal - a.grandTotal);
+                frozenSortOrder = chartData.map(d => d.memberType);
+            } else {
+                // Subsequent loads: Match the initial index order so elements don't jump around
+                chartData.sort((a, b) => {
+                    let indexA = frozenSortOrder.indexOf(a.memberType);
+                    let indexB = frozenSortOrder.indexOf(b.memberType);
+                    
+                    if (indexA === -1) indexA = 999999; // Unknown item fallback to bottom
+                    if (indexB === -1) indexB = 999999;
+                    
+                    if (indexA === indexB) return b.grandTotal - a.grandTotal;
+                    
+                    return indexA - indexB;
+                });
+            }
 
             const generateUnitBlocks = (raw, total, colorDark, colorLight) => {
                 if (total === 0) return ``;
@@ -468,7 +496,15 @@
 
             chartData.forEach(d => {
                 const isSupportedClass = d.isSupported ? '' : 'text-slate-500 italic';
-                const badge = d.isSupported ? '' : `<span class="inline-flex items-center ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 text-slate-600">Not Supported</span>`;
+                
+                // Add Badges conditionally based on full support, partial support, or none.
+                let badge = '';
+                if (!d.isSupported) {
+                    badge = `<span class="inline-flex items-center ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 text-slate-600">Not Supported</span>`;
+                } else if (clangPartialSupported.has(d.rawMemberType)) {
+                    badge = `<span class="inline-flex items-center ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 border border-amber-200 text-amber-700">Partial Support</span>`;
+                }
+
                 const rowBgClass = d.isSupported ? 'bg-white' : 'bg-slate-100';
                 
                 const prodDark = 'bg-blue-500';
